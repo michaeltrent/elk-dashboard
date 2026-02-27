@@ -7,7 +7,6 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script src="https://unpkg.com/esri-leaflet@3.0.19/dist/esri-leaflet.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -329,16 +328,17 @@ function updateFilterUI(){
 }
 
 // ---- SMA PUBLIC LANDS LAYER ----
-const SMA_URL='https://gis.blm.gov/coarcgis/rest/services/lands/BLM_CO_SurfaceManagementAgency/MapServer';
+// BLM National cached tile service — no library needed, just standard tile images
+const SMA_TILE_URL='https://gis.blm.gov/arcgis/rest/services/lands/BLM_Natl_SMA_Cached_without_PriUnk/MapServer/tile/{z}/{y}/{x}';
 
 function toggleSMA(on){
   if(on){
     if(!smaLayer){
-      smaLayer=L.esri.dynamicMapLayer({
-        url:SMA_URL,
+      smaLayer=L.tileLayer(SMA_TILE_URL,{
+        pane:'smaPane',
         opacity:+document.getElementById('smaOpacity').value/100,
-        layers:[0],
-        pane:'smaPane'
+        maxZoom:15,
+        attribution:'BLM SMA'
       });
     }
     smaLayer.addTo(map);
