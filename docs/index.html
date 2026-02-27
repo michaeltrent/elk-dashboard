@@ -38,6 +38,9 @@
   input[type="range"]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--accent);border:2px solid var(--bg);box-shadow:0 0 6px rgba(212,160,84,.4);cursor:pointer}
   input[type="range"]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--accent);border:2px solid var(--bg);cursor:pointer}
 
+  .opacity-row{display:flex;align-items:center;gap:8px}
+  .opacity-val{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);min-width:32px;text-align:right}
+
   .pill-group{display:flex;border:1px solid var(--border);border-radius:5px;overflow:hidden}
   .pill-group label{flex:1;text-align:center;padding:6px 8px;font-size:11px;font-weight:500;color:var(--text-dim);cursor:pointer;transition:all .2s;background:var(--bg);border-right:1px solid var(--border)}
   .pill-group label:last-child{border-right:none}
@@ -52,6 +55,19 @@
   .stat-card .stat-label{font-size:9.5px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.05em;margin-top:1px}
   .stat-card.highlight .stat-value{color:var(--accent)}
 
+  /* GMU filter section */
+  .gmu-filter{padding:14px 22px;border-bottom:1px solid var(--border)}
+  .filter-presets{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+  .preset-btn{font-family:'DM Sans',sans-serif;font-size:10.5px;font-weight:600;padding:5px 10px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text-dim);cursor:pointer;transition:all .2s;white-space:nowrap}
+  .preset-btn:hover{border-color:var(--accent);color:var(--accent)}
+  .preset-btn.active{background:var(--accent-dim);border-color:var(--accent);color:var(--accent)}
+  .hidden-chips{display:flex;flex-wrap:wrap;gap:4px;max-height:80px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+  .hidden-chips:empty::after{content:'All units visible';font-size:10.5px;color:var(--text-dim);font-style:italic}
+  .chip{display:inline-flex;align-items:center;gap:3px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:500;padding:2px 6px;background:var(--bg);border:1px solid var(--border);border-radius:3px;color:var(--text-dim);cursor:default}
+  .chip .chip-x{cursor:pointer;color:var(--red);font-weight:700;font-size:11px;line-height:1;padding:0 1px;margin-left:1px}
+  .chip .chip-x:hover{color:var(--text)}
+  .filter-count{font-size:10px;color:var(--text-dim);margin-top:6px;font-style:italic}
+
   .selection-info{padding:14px 22px;flex:1}
   .selection-placeholder{color:var(--text-dim);font-size:13px;text-align:center;padding:28px 10px;line-height:1.6;border:1px dashed var(--border);border-radius:8px;margin-top:6px}
   .gmu-header{display:flex;align-items:baseline;gap:8px;margin-bottom:3px}
@@ -63,6 +79,8 @@
   .gmu-stat .val{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600}
   .gmu-stat .lbl{font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.04em;margin-top:1px}
   .avg-note{font-size:10px;color:var(--text-dim);text-align:center;margin-top:-10px;margin-bottom:14px;font-style:italic}
+  .hide-btn{font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;padding:4px 10px;border-radius:4px;border:1px solid var(--border);background:var(--bg);color:var(--text-dim);cursor:pointer;transition:all .2s;margin-left:auto}
+  .hide-btn:hover{border-color:var(--red);color:var(--red)}
 
   .chart-section{margin-bottom:16px}
   .chart-title{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-dim);font-weight:600;margin-bottom:6px;display:flex;align-items:center;gap:5px}
@@ -120,6 +138,9 @@
     <div class="control-group"><div class="control-label">Map Metric</div>
       <select id="metricSelect"><option value="h">Total Harvest</option><option value="n">Total Hunters</option><option value="p">% Success Rate</option><option value="b">Bulls Harvested</option><option value="c">Cows Harvested</option><option value="r">Recreation Days</option></select>
     </div>
+    <div class="control-group"><div class="control-label">Layer Opacity</div>
+      <div class="opacity-row"><input type="range" id="opacitySlider" min="10" max="100" value="72" step="1"><span class="opacity-val" id="opacityVal">72%</span></div>
+    </div>
     <div class="control-group"><div class="control-label">Basemap</div>
       <div class="pill-group">
         <input type="radio" name="basemap" id="bmDark" value="dark" checked><label for="bmDark">Dark</label>
@@ -128,6 +149,19 @@
       </div>
     </div>
   </div>
+
+  <!-- GMU Filter -->
+  <div class="gmu-filter">
+    <div class="section-title">Visible Units</div>
+    <div class="filter-presets">
+      <button class="preset-btn active" id="btnShowAll" onclick="showAllGMUs()">Show All</button>
+      <button class="preset-btn" id="btnOTC" onclick="showOTCOnly()">OTC Archery</button>
+      <button class="preset-btn" id="btnOTCRifle" onclick="showOTCRifleOnly()">OTC 2nd/3rd Rifle</button>
+    </div>
+    <div class="hidden-chips" id="hiddenChips"></div>
+    <div class="filter-count" id="filterCount"></div>
+  </div>
+
   <div class="statewide">
     <div class="section-title">Statewide — <span id="stateYear">2024</span> <span id="stateAvgBadge"></span></div>
     <div class="stat-grid">
@@ -151,6 +185,16 @@
 <script>
 let DATA,GEOJSON,map,gmuLayer,labelLayer,selectedGMU=null,popChart,harvestChart,bmTile,bmLabel;
 
+// GMU visibility
+let hiddenGMUs=new Set();
+let activePreset='all'; // 'all', 'otc', or 'custom'
+
+// OTC Archery GMUs
+const OTC_ARCHERY_GMUS=new Set([3,6,11,13,14,15,16,17,18,21,22,25,26,27,28,30,31,32,34,35,36,37,38,43,53,59,60,62,63,64,65,68,79,82,83,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,105,106,107,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,161,171,181,211,214,231,301,361,371,431,471,511,581,591,681,691,851,861,951]);
+
+// OTC 2nd & 3rd Rifle GMUs
+const OTC_RIFLE_GMUS=new Set([3,4,5,6,11,12,13,14,15,16,17,18,21,22,23,24,25,26,27,28,30,31,32,33,34,35,36,37,38,41,42,43,44,45,47,52,53,59,60,62,63,64,65,68,70,71,72,73,74,75,77,78,80,81,82,85,86,131,133,134,140,141,142,161,171,181,211,214,231,301,361,371,411,421,431,441,444,471,511,521,581,591,681,691,711,741,751,771,851]);
+
 const FL={h:'Total Harvest',n:'Total Hunters',p:'% Success',b:'Bulls',c:'Cows',r:'Rec Days'};
 const SL={'all|all':'All Manners','archery|all':'Archery','muzzleloader|all':'Muzzleloader','rifle|all':'Rifle (All)','rifle|1st':'1st Rifle','rifle|2nd':'2nd Rifle','rifle|3rd':'3rd Rifle','rifle|4th':'4th Rifle'};
 const CC=['#1e2124','#2d4a2e','#3d6a3e','#4a8a42','#6aaa4a','#8abb4e','#b8cc44','#d4a054','#e87740'];
@@ -160,7 +204,7 @@ const BM={
   satellite:{t:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',l:'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png',c:''}
 };
 
-let hIdx={},hByGMU={},popByDAU={},centroids={};
+let hIdx={},hByGMU={},popByDAU={},centroids={},allGMUs=new Set();
 
 async function init(){
   try{
@@ -177,7 +221,11 @@ function buildIdx(){
   for(const d of Object.keys(popByDAU))popByDAU[d].sort((a,b)=>a.year-b.year);
   const yrs=DATA.metadata.harvest_years;
   if(yrs.length){const s=document.getElementById('yearSlider');s.min=yrs[0];s.max=yrs[yrs.length-1];s.value=yrs[yrs.length-1];document.getElementById('yearDisplay').textContent=s.value}
-  for(const f of GEOJSON.features){const gmu=f.properties.GMUID;const cs=f.geometry.type==='Polygon'?f.geometry.coordinates[0]:f.geometry.coordinates[0][0];let sla=0,slo=0;for(const c of cs){slo+=c[0];sla+=c[1]}centroids[gmu]=[sla/cs.length,slo/cs.length]}
+  for(const f of GEOJSON.features){
+    const gmu=f.properties.GMUID;allGMUs.add(gmu);
+    const cs=f.geometry.type==='Polygon'?f.geometry.coordinates[0]:f.geometry.coordinates[0][0];
+    let sla=0,slo=0;for(const c of cs){slo+=c[0];sla+=c[1]}centroids[gmu]=[sla/cs.length,slo/cs.length];
+  }
 }
 
 function gY(){return+document.getElementById('yearSlider').value}
@@ -185,6 +233,8 @@ function gW(){return+document.getElementById('avgSelect').value}
 function gM(){return document.getElementById('metricSelect').value}
 function gS(){return document.getElementById('seasonSelect').value}
 function gMS(){return gS().split('|')}
+function gO(){return+document.getElementById('opacitySlider').value/100}
+function isVisible(gmu){return !hiddenGMUs.has(gmu)}
 function getRec(g,y,m,s){return hIdx[`${y}_${g}_${m}_${s}`]||null}
 
 function getAvg(gmu,cy,m,s,f){
@@ -203,9 +253,56 @@ function getAvgRec(gmu,cy,m,s){
   return res.h!=null?res:null;
 }
 
-function initMap(){
-  map=L.map('map',{center:[38.9,-105.7],zoom:7});setBM('dark');
+// ---- GMU VISIBILITY ----
+function showAllGMUs(){
+  hiddenGMUs.clear();activePreset='all';updateFilterUI();updateAll();
 }
+
+function showOTCOnly(){
+  hiddenGMUs.clear();
+  for(const gmu of allGMUs){if(!OTC_ARCHERY_GMUS.has(gmu))hiddenGMUs.add(gmu)}
+  activePreset='otc';updateFilterUI();updateAll();
+}
+
+function showOTCRifleOnly(){
+  hiddenGMUs.clear();
+  for(const gmu of allGMUs){if(!OTC_RIFLE_GMUS.has(gmu))hiddenGMUs.add(gmu)}
+  activePreset='otcrifle';updateFilterUI();updateAll();
+}
+
+function hideGMU(gmu){
+  hiddenGMUs.add(gmu);activePreset='custom';updateFilterUI();updateAll();
+}
+
+function unhideGMU(gmu){
+  hiddenGMUs.delete(gmu);
+  if(hiddenGMUs.size===0)activePreset='all';
+  else activePreset='custom';
+  updateFilterUI();updateAll();
+}
+
+function updateFilterUI(){
+  // Preset buttons
+  document.getElementById('btnShowAll').classList.toggle('active',activePreset==='all');
+  document.getElementById('btnOTC').classList.toggle('active',activePreset==='otc');
+  document.getElementById('btnOTCRifle').classList.toggle('active',activePreset==='otcrifle');
+
+  // Hidden chips
+  const container=document.getElementById('hiddenChips');
+  if(hiddenGMUs.size===0){container.innerHTML='';
+  }else{
+    const sorted=[...hiddenGMUs].sort((a,b)=>a-b);
+    container.innerHTML=sorted.map(g=>`<span class="chip">${g}<span class="chip-x" onclick="unhideGMU(${g})">&times;</span></span>`).join('');
+  }
+
+  // Count
+  const vis=allGMUs.size-hiddenGMUs.size;
+  const countEl=document.getElementById('filterCount');
+  countEl.textContent=hiddenGMUs.size>0?`${vis} of ${allGMUs.size} units visible`:'';
+}
+
+// ---- MAP ----
+function initMap(){map=L.map('map',{center:[38.9,-105.7],zoom:7});setBM('dark')}
 
 function setBM(n){
   const b=BM[n];if(bmTile)map.removeLayer(bmTile);if(bmLabel)map.removeLayer(bmLabel);
@@ -215,13 +312,21 @@ function setBM(n){
 }
 
 function updateMap(){
-  const yr=gY(),met=gM(),[mth,sea]=gMS(),sc=colorScale(met,yr,mth,sea);
+  const yr=gY(),met=gM(),[mth,sea]=gMS(),opacity=gO();
+  // Color scale only from visible GMUs
+  const sc=colorScale(met,yr,mth,sea);
   if(gmuLayer)map.removeLayer(gmuLayer);
   gmuLayer=L.geoJSON(GEOJSON,{
-    style:f=>{const v=getAvg(f.properties.GMUID,yr,mth,sea,met),sel=selectedGMU===f.properties.GMUID;
-      return{fillColor:sc.gc(v),fillOpacity:sel?.92:.72,weight:sel?3:.7,color:sel?'#d4a054':'#3a4148',opacity:sel?1:.5}},
+    style:f=>{
+      const gmu=f.properties.GMUID,vis=isVisible(gmu),sel=selectedGMU===gmu;
+      if(!vis)return{fillColor:'transparent',fillOpacity:0,weight:0.3,color:'#2a2f35',opacity:0.2};
+      const v=getAvg(gmu,yr,mth,sea,met);
+      return{fillColor:sc.gc(v),fillOpacity:sel?Math.min(opacity+0.15,1):opacity,weight:sel?3:.7,color:sel?'#d4a054':'#3a4148',opacity:sel?1:.5};
+    },
     onEachFeature:(f,ly)=>{
-      const gmu=f.properties.GMUID,dau=f.properties.ELKDAU,v=getAvg(gmu,yr,mth,sea,met);
+      const gmu=f.properties.GMUID;
+      if(!isVisible(gmu)){ly.on('click',()=>{});return}
+      const dau=f.properties.ELKDAU,v=getAvg(gmu,yr,mth,sea,met);
       const vs=v!=null?fmtM(v,met):'No data',sl=SL[gS()]||'',aw=gW(),al=aw>1?` (${aw}yr avg)`:'';
       ly.bindTooltip(`<strong>GMU ${gmu}</strong> · ${dau}<br>${sl} · ${FL[met]}: <strong>${vs}</strong>${al}`,{sticky:true,direction:'top',offset:[0,-8]});
       ly.on('click',()=>{selectedGMU=gmu;updateAll()});
@@ -232,13 +337,20 @@ function updateMap(){
 
 function updateLabels(){
   if(labelLayer)map.removeLayer(labelLayer);labelLayer=L.layerGroup();
-  for(const f of GEOJSON.features){const g=f.properties.GMUID,ll=centroids[g];if(!ll)continue;
-    labelLayer.addLayer(L.marker(ll,{icon:L.divIcon({className:'gmu-label',html:''+g,iconSize:[30,12],iconAnchor:[15,6]}),interactive:false}))}
+  for(const f of GEOJSON.features){
+    const g=f.properties.GMUID;if(!isVisible(g))continue;
+    const ll=centroids[g];if(!ll)continue;
+    labelLayer.addLayer(L.marker(ll,{icon:L.divIcon({className:'gmu-label',html:''+g,iconSize:[30,12],iconAnchor:[15,6]}),interactive:false}));
+  }
   labelLayer.addTo(map);
 }
 
 function colorScale(met,yr,mth,sea){
-  const vals=[];for(const f of GEOJSON.features){const v=getAvg(f.properties.GMUID,yr,mth,sea,met);if(v!=null&&v>0)vals.push(v)}
+  const vals=[];
+  for(const f of GEOJSON.features){
+    if(!isVisible(f.properties.GMUID))continue;
+    const v=getAvg(f.properties.GMUID,yr,mth,sea,met);if(v!=null&&v>0)vals.push(v);
+  }
   vals.sort((a,b)=>a-b);if(!vals.length)return{br:[],gc:()=>CC[0]};
   const br=[];for(let i=1;i<=7;i++){br.push(vals[Math.min(Math.floor(vals.length*i/7),vals.length-1)])}
   const ub=[...new Set(br)];
@@ -253,12 +365,13 @@ function updateLeg(sc,met){
 }
 function li(c,t){return`<div class="legend-item"><div class="legend-swatch" style="background:${c}"></div><span>${t}</span></div>`}
 
+// ---- SELECTION ----
 function selectPanel(gmu){
   const yr=gY(),[mth,sea]=gMS(),aw=gW(),rec=getAvgRec(gmu,yr,mth,sea),info=document.getElementById('selInfo');
   const feat=GEOJSON.features.find(f=>f.properties.GMUID===gmu);
   const dau=feat?feat.properties.ELKDAU:null,county=feat?feat.properties.COUNTY:'',sqmi=feat?Math.round(feat.properties.SQ_MILES):null;
   const dd=dau&&DATA.dau_definitions?DATA.dau_definitions[dau]:null,hn=dd?dd.herd_name:null,sl=SL[gS()];
-  let h=`<div class="section-title">Selected Unit <span class="filter-active">${sl}</span></div>`;
+  let h=`<div class="section-title" style="display:flex;align-items:center">Selected Unit <span class="filter-active">${sl}</span><button class="hide-btn" onclick="hideGMU(${gmu})">Hide Unit</button></div>`;
   h+=`<div class="gmu-header"><h2>GMU ${gmu}</h2>${dau?`<span class="dau-badge">${dau}${hn?' · '+hn:''}</span>`:''}</div>`;
   h+=`<div class="gmu-meta">${county||''}${sqmi?' · '+sqmi+' mi²':''}</div>`;
   if(rec){
@@ -278,6 +391,7 @@ function selectPanel(gmu){
   requestAnimationFrame(()=>{renderPop(dau,yr);renderHarv(gmu,yr,mth,sea)});
 }
 
+// ---- CHARTS ----
 const CB={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#181c20',borderColor:'#2a2f35',borderWidth:1,titleColor:'#e8e6e3',bodyColor:'#e8e6e3',titleFont:{family:'DM Sans',size:11,weight:600},bodyFont:{family:'JetBrains Mono',size:11},padding:8,cornerRadius:5,displayColors:false}},scales:{x:{ticks:{color:'#8a9199',font:{family:'JetBrains Mono',size:9}},grid:{color:'rgba(42,47,53,.4)',drawTicks:false},border:{color:'#2a2f35'}},y:{ticks:{color:'#8a9199',font:{family:'JetBrains Mono',size:9},callback:v=>v>=1000?(v/1000)+'k':v},grid:{color:'rgba(42,47,53,.4)',drawTicks:false},border:{color:'#2a2f35'},beginAtZero:false}},layout:{padding:{top:2,right:2}}};
 
 function renderPop(dau,cy){
@@ -299,6 +413,7 @@ function renderHarv(gmu,cy,mth,sea){
   ]},options:{...CB,plugins:{...CB.plugins,legend:{display:true,position:'top',align:'end',labels:{color:'#8a9199',font:{family:'DM Sans',size:9.5},boxWidth:9,boxHeight:9,borderRadius:2,padding:6}},tooltip:{...CB.plugins.tooltip,mode:'index',callbacks:{title:c=>'Year: '+c[0].label,label:c=>c.dataset.label+': '+c.parsed.y.toLocaleString()}}},scales:{...CB.scales,x:{...CB.scales.x,stacked:true},y:{...CB.scales.y,stacked:true,beginAtZero:true}}}});
 }
 
+// ---- STATEWIDE ----
 function updateSW(){
   const yr=gY(),aw=gW(),[mth,sea]=gMS();
   document.getElementById('stateYear').textContent=yr;
@@ -310,12 +425,13 @@ function updateSW(){
   const half=Math.floor(aw/2);let tH=0,tN=0,yc=0;
   for(let y=yr-half;y<=yr+half;y++){
     if(mth==='all'&&sea==='all'){const hd=DATA.statewide_trends.harvest||{};if(hd[y]){tH+=hd[y].total_harvest;tN+=hd[y].total_hunters;yc++}}
-    else{let yh=0,yn=0,ok=false;for(const f of GEOJSON.features){const r=getRec(f.properties.GMUID,y,mth,sea);if(r){yh+=r.h||0;yn+=r.n||0;ok=true}}if(ok){tH+=yh;tN+=yn;yc++}}
+    else{let yh=0,yn=0,ok=false;for(const f of GEOJSON.features){if(!isVisible(f.properties.GMUID))continue;const r=getRec(f.properties.GMUID,y,mth,sea);if(r){yh+=r.h||0;yn+=r.n||0;ok=true}}if(ok){tH+=yh;tN+=yn;yc++}}
   }
   if(yc){const ah=Math.round(tH/yc),an=Math.round(tN/yc);document.getElementById('swHarv').textContent=fC(ah);document.getElementById('swHunt').textContent=fC(an);document.getElementById('swSucc').textContent=an>0?Math.round(100*ah/an)+'%':'—'}
   else{document.getElementById('swHarv').textContent='—';document.getElementById('swHunt').textContent='—';document.getElementById('swSucc').textContent='—'}
 }
 
+// ---- CONTROLS ----
 function initCtrl(){
   const sl=document.getElementById('yearSlider'),dp=document.getElementById('yearDisplay');
   sl.addEventListener('input',()=>{dp.textContent=sl.value;updateAll()});
@@ -323,6 +439,9 @@ function initCtrl(){
   document.getElementById('seasonSelect').addEventListener('change',updateAll);
   document.getElementById('avgSelect').addEventListener('change',updateAll);
   document.querySelectorAll('input[name="basemap"]').forEach(r=>r.addEventListener('change',()=>{setBM(r.value);updateMap()}));
+  const os=document.getElementById('opacitySlider'),ov=document.getElementById('opacityVal');
+  os.addEventListener('input',()=>{ov.textContent=os.value+'%';updateMap()});
+  updateFilterUI();
 }
 
 function updateAll(){updateMap();updateSW();if(selectedGMU!=null)selectPanel(selectedGMU)}
