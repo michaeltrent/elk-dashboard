@@ -7,7 +7,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/esri-leaflet/3.0.12/esri-leaflet.min.js"></script>
+<script src="https://unpkg.com/esri-leaflet@3.0.19/dist/esri-leaflet.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -334,10 +334,14 @@ const SMA_URL='https://gis.blm.gov/coarcgis/rest/services/lands/BLM_CO_SurfaceMa
 function toggleSMA(on){
   if(on){
     if(!smaLayer){
-      smaLayer=L.esri.dynamicMapLayer({url:SMA_URL,opacity:+document.getElementById('smaOpacity').value/100,layers:[0],useCors:true});
+      smaLayer=L.esri.dynamicMapLayer({
+        url:SMA_URL,
+        opacity:+document.getElementById('smaOpacity').value/100,
+        layers:[0],
+        pane:'smaPane'
+      });
     }
     smaLayer.addTo(map);
-    smaLayer.bringToBack();
     document.getElementById('smaOpacityWrap').style.display='';
     document.getElementById('smaLegend').classList.add('visible');
   }else{
@@ -354,7 +358,14 @@ function updateSMAOpacity(){
 }
 
 // ---- MAP ----
-function initMap(){map=L.map('map',{center:[38.9,-105.7],zoom:7});setBM('dark')}
+function initMap(){
+  map=L.map('map',{center:[38.9,-105.7],zoom:7});
+  // Custom pane for SMA: above basemap tiles (200) but below GMU overlays (400)
+  map.createPane('smaPane');
+  map.getPane('smaPane').style.zIndex=250;
+  map.getPane('smaPane').style.pointerEvents='none';
+  setBM('dark');
+}
 
 function setBM(n){
   const b=BM[n];if(bmTile)map.removeLayer(bmTile);if(bmLabel)map.removeLayer(bmLabel);
@@ -385,7 +396,6 @@ function updateMap(){
     }
   }).addTo(map);
   updateLabels();updateLeg(sc,met);
-  if(smaLayer&&map.hasLayer(smaLayer))smaLayer.bringToBack();
 }
 
 function updateLabels(){
