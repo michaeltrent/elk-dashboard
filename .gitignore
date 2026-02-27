@@ -1,0 +1,27 @@
+# Source PDFs (large, not code)
+harvest_reports/
+population_estimates/
+elk_pdfs/
+*.pdf
+*.zip
+
+# Raw GIS files (large, we track the simplified version only)
+mapping_files/
+
+# Parser intermediate output
+output/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+*.swp
+*.swo
