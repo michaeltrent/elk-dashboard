@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Colorado Elk Dashboard — Login</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+  :root{--bg:#0f1215;--surface:#181c20;--surface2:#1f2428;--border:#2a2f35;--text:#e8e6e3;--text-dim:#8a9199;--accent:#d4a054;--accent-dim:rgba(212,160,84,0.15);--red:#c95b5b}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;align-items:center;justify-content:center}
+  .login-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:40px 36px;width:360px;max-width:90vw;box-shadow:0 8px 40px rgba(0,0,0,.5)}
+  .login-card h1{font-size:22px;font-weight:700;color:var(--accent);margin-bottom:4px;letter-spacing:.02em}
+  .login-card .subtitle{font-size:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.06em;margin-bottom:28px}
+  .login-card label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-dim);font-weight:600;display:block;margin-bottom:6px}
+  .login-card input[type="password"]{width:100%;font-family:'DM Sans',sans-serif;font-size:14px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:12px 14px;outline:none;transition:border-color .2s;margin-bottom:8px}
+  .login-card input[type="password"]:focus{border-color:var(--accent)}
+  .login-card input[type="password"]::placeholder{color:var(--text-dim)}
+  .error{font-size:12px;color:var(--red);min-height:18px;margin-bottom:12px}
+  .login-btn{width:100%;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;background:var(--accent);color:var(--bg);border:none;border-radius:6px;padding:12px;cursor:pointer;transition:opacity .2s;letter-spacing:.02em}
+  .login-btn:hover{opacity:.9}
+  .login-btn:disabled{opacity:.5;cursor:default}
+  .elk-icon{text-align:center;margin-bottom:20px;font-size:36px}
+</style>
+</head>
+<body>
+<div class="login-card">
+  <div class="elk-icon">🦌</div>
+  <h1>Colorado Elk Dashboard</h1>
+  <div class="subtitle">Harvest & Population · CPW Data</div>
+  <label for="pw">Password</label>
+  <input type="password" id="pw" placeholder="Enter access password" autofocus
+    onkeydown="if(event.key==='Enter')doLogin()">
+  <div class="error" id="err"></div>
+  <button class="login-btn" id="btn" onclick="doLogin()">Sign In</button>
+</div>
+<script>
+async function doLogin(){
+  const pw=document.getElementById('pw').value.trim();
+  if(!pw)return;
+  const btn=document.getElementById('btn'),err=document.getElementById('err');
+  btn.disabled=true;btn.textContent='Signing in…';err.textContent='';
+  try{
+    const r=await fetch('/api/auth',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({password:pw})
+    });
+    if(r.ok){
+      window.location.href='/';
+    }else{
+      err.textContent='Incorrect password. Please try again.';
+      document.getElementById('pw').select();
+    }
+  }catch(e){
+    err.textContent='Connection error. Please try again.';
+  }
+  btn.disabled=false;btn.textContent='Sign In';
+}
+</script>
+</body>
+</html>

@@ -119,6 +119,32 @@
   .sma-legend.visible{display:block}
   .sma-legend-item{display:flex;align-items:center;gap:7px;margin-bottom:3px;font-size:10.5px;color:var(--text-dim)}
   .sma-legend-swatch{width:16px;height:9px;border-radius:2px;flex-shrink:0}
+
+  /* AI Chat */
+  #chatBtn{position:absolute;bottom:28px;right:170px;z-index:900;width:44px;height:44px;border-radius:50%;background:var(--accent);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,.5);transition:transform .2s,box-shadow .2s}
+  #chatBtn:hover{transform:scale(1.08);box-shadow:0 4px 20px rgba(212,160,84,.5)}
+  #chatBtn svg{width:22px;height:22px;fill:var(--bg)}
+  #chatPanel{position:absolute;top:0;right:0;bottom:0;width:420px;max-width:50%;background:var(--surface);border-left:1px solid var(--border);z-index:950;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s ease;box-shadow:-4px 0 24px rgba(0,0,0,.4)}
+  #chatPanel.open{transform:translateX(0)}
+  .chat-header{padding:14px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:linear-gradient(180deg,var(--surface2) 0%,var(--surface) 100%)}
+  .chat-header h3{font-size:14px;font-weight:700;color:var(--accent);display:flex;align-items:center;gap:7px}
+  .chat-header h3 svg{width:16px;height:16px;fill:var(--accent)}
+  .chat-close{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:20px;padding:2px 6px;border-radius:4px;transition:color .2s}
+  .chat-close:hover{color:var(--text)}
+  .chat-messages{flex:1;overflow-y:auto;padding:14px 18px;display:flex;flex-direction:column;gap:12px;scrollbar-width:thin;scrollbar-color:var(--border) transparent}
+  .chat-msg{max-width:92%;line-height:1.55;font-size:13px}
+  .chat-msg.user{align-self:flex-end;background:var(--accent-dim);color:var(--text);padding:10px 14px;border-radius:12px 12px 3px 12px;border:1px solid rgba(212,160,84,.2)}
+  .chat-msg.ai{align-self:flex-start;background:var(--bg);color:var(--text);padding:10px 14px;border-radius:12px 12px 12px 3px;border:1px solid var(--border)}
+  .chat-msg.ai .msg-label{font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);font-weight:600;margin-bottom:4px}
+  .chat-msg.system{align-self:center;color:var(--text-dim);font-size:11.5px;font-style:italic;text-align:center;padding:6px 0}
+  .chat-typing{align-self:flex-start;color:var(--text-dim);font-size:12px;font-style:italic;padding:6px 0}
+  .chat-input-wrap{padding:12px 18px;border-top:1px solid var(--border);display:flex;gap:8px;background:var(--surface)}
+  .chat-input-wrap textarea{flex:1;font-family:'DM Sans',sans-serif;font-size:13px;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:10px 12px;outline:none;resize:none;min-height:42px;max-height:100px;line-height:1.4;transition:border-color .2s}
+  .chat-input-wrap textarea:focus{border-color:var(--accent)}
+  .chat-input-wrap textarea::placeholder{color:var(--text-dim)}
+  .chat-send{width:42px;height:42px;border-radius:8px;background:var(--accent);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:opacity .2s;flex-shrink:0}
+  .chat-send:disabled{opacity:.35;cursor:default}
+  .chat-send svg{width:18px;height:18px;fill:var(--bg)}
 </style>
 </head>
 <body>
@@ -194,6 +220,24 @@
 <div id="map-container">
   <div id="map"></div>
   <div class="legend" id="legend"><div class="legend-title" id="legTitle">Total Harvest</div><div id="legItems"></div></div>
+
+  <!-- AI Chat -->
+  <button id="chatBtn" onclick="toggleChat()" title="Ask AI about the data">
+    <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H5.2L4 17.2V4h16v12z"/><path d="M7 9h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2z"/></svg>
+  </button>
+  <div id="chatPanel">
+    <div class="chat-header">
+      <h3><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg> Elk Data Assistant</h3>
+      <button class="chat-close" onclick="toggleChat()">&times;</button>
+    </div>
+    <div class="chat-messages" id="chatMessages">
+      <div class="chat-msg system">Ask questions about the elk harvest data — success rates, GMU comparisons, trends, and more.</div>
+    </div>
+    <div class="chat-input-wrap">
+      <textarea id="chatInput" placeholder="e.g. Which GMU has the highest archery success rate?" rows="1" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"></textarea>
+      <button class="chat-send" id="chatSend" onclick="sendChat()"><svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg></button>
+    </div>
+  </div>
   <div class="sma-legend" id="smaLegend">
     <div class="legend-title">Public Lands</div>
     <div class="sma-legend-item"><div class="sma-legend-swatch" style="background:#ffd37f"></div><span>BLM</span></div>
@@ -514,6 +558,209 @@ function updateAll(){updateMap();updateSW();if(selectedGMU!=null)selectPanel(sel
 function fN(v){return v!=null?v.toLocaleString():'—'}
 function fmtM(v,m){return v==null?'—':m==='p'?v+'%':v.toLocaleString()}
 function fC(v){if(v==null)return'—';if(v>=1e6)return(v/1e6).toFixed(1)+'M';if(v>=1e4)return Math.round(v/1e3)+'k';if(v>=1e3)return(v/1e3).toFixed(1)+'k';return v.toLocaleString()}
+
+// ---- AI CHAT ----
+let chatOpen=false,chatBusy=false,chatHistory=[];
+
+function toggleChat(){
+  chatOpen=!chatOpen;
+  document.getElementById('chatPanel').classList.toggle('open',chatOpen);
+  if(chatOpen)document.getElementById('chatInput').focus();
+}
+
+function buildDataContext(){
+  // Build a compact but comprehensive summary the AI can analyze
+  const years=DATA.metadata.harvest_years||[];
+  const methods=['all|all','archery|all','muzzleloader|all','rifle|all','rifle|1st','rifle|2nd','rifle|3rd','rifle|4th'];
+  const methodLabels={'all|all':'All','archery|all':'Archery','muzzleloader|all':'Muzzleloader','rifle|all':'Rifle All','rifle|1st':'1st Rifle','rifle|2nd':'2nd Rifle','rifle|3rd':'3rd Rifle','rifle|4th':'4th Rifle'};
+
+  // Aggregate per GMU per method: compute averages across all years and last 5 years
+  const gmus=[...allGMUs].sort((a,b)=>a-b);
+  const maxYr=Math.max(...years),last5=years.filter(y=>y>=maxYr-4);
+  const rows=[];
+
+  for(const gmu of gmus){
+    for(const mk of methods){
+      const [m,s]=mk.split('|');
+      const k=`${m}_${s}`;
+      const recs=(hByGMU[gmu]&&hByGMU[gmu][k])||[];
+      if(!recs.length)continue;
+      // All years averages
+      const n=recs.length;
+      const avg=f=>{ const vs=recs.filter(r=>r[f]!=null).map(r=>r[f]); return vs.length?Math.round(vs.reduce((a,b)=>a+b,0)/vs.length):null; };
+      // Last 5 years
+      const r5=recs.filter(r=>last5.includes(r.y));
+      const avg5=f=>{ const vs=r5.filter(r=>r[f]!=null).map(r=>r[f]); return vs.length?Math.round(vs.reduce((a,b)=>a+b,0)/vs.length):null; };
+      rows.push({
+        gmu,method:methodLabels[mk],
+        yrs:recs.map(r=>r.y).join(','),
+        all_avg:{h:avg('h'),n:avg('n'),p:avg('p'),b:avg('b'),c:avg('c'),r:avg('r')},
+        last5_avg:{h:avg5('h'),n:avg5('n'),p:avg5('p'),b:avg5('b'),c:avg5('c'),r:avg5('r')}
+      });
+    }
+  }
+
+  // Also include per-year raw data for targeted queries, but only "all|all" to keep it compact
+  const yearlyByGmu={};
+  for(const gmu of gmus){
+    const k='all_all';
+    const recs=(hByGMU[gmu]&&hByGMU[gmu][k])||[];
+    if(recs.length) yearlyByGmu[gmu]=recs.map(r=>({y:r.y,h:r.h,n:r.n,p:r.p,b:r.b,c:r.c,r:r.r}));
+  }
+
+  // Method-specific yearly data (more compact - only include per-year for archery, rifle)
+  const methodYearly={};
+  for(const gmu of gmus){
+    for(const mk of ['archery_all','muzzleloader_all','rifle_all']){
+      const recs=(hByGMU[gmu]&&hByGMU[gmu][mk])||[];
+      if(recs.length){
+        if(!methodYearly[mk])methodYearly[mk]={};
+        methodYearly[mk][gmu]=recs.map(r=>({y:r.y,h:r.h,n:r.n,p:r.p,b:r.b,c:r.c}));
+      }
+    }
+  }
+
+  // Population by DAU
+  const popSummary={};
+  for(const[dau,recs] of Object.entries(popByDAU)){
+    popSummary[dau]=recs.map(r=>({year:r.year,pop:r.population_estimate}));
+  }
+
+  // GMU-to-DAU mapping
+  const gmuDau={};
+  for(const f of GEOJSON.features){
+    gmuDau[f.properties.GMUID]={dau:f.properties.ELKDAU,county:f.properties.COUNTY};
+  }
+
+  // OTC units
+  const otcArch=[...OTC_ARCHERY_GMUS].sort((a,b)=>a-b);
+  const otcRifle=[...OTC_RIFLE_GMUS].sort((a,b)=>a-b);
+
+  return JSON.stringify({
+    info:'Colorado elk harvest data from CPW. Fields: h=total harvest, n=hunters, p=% success, b=bulls, c=cows, r=rec days',
+    years,
+    aggregated_by_gmu_method:rows,
+    yearly_all_methods:yearlyByGmu,
+    yearly_by_method:methodYearly,
+    population_by_dau:popSummary,
+    gmu_details:gmuDau,
+    otc_archery_units:otcArch,
+    otc_rifle_2nd3rd_units:otcRifle
+  });
+}
+
+async function sendChat(){
+  if(chatBusy)return;
+  const input=document.getElementById('chatInput');
+  const q=input.value.trim();
+  if(!q)return;
+  input.value='';
+
+  // Add user message
+  appendMsg('user',q);
+  chatBusy=true;
+  document.getElementById('chatSend').disabled=true;
+
+  // Show typing indicator
+  const typing=document.createElement('div');
+  typing.className='chat-typing';
+  typing.textContent='Analyzing data…';
+  document.getElementById('chatMessages').appendChild(typing);
+  typing.scrollIntoView({behavior:'smooth'});
+
+  try{
+    // Build context (lazy — rebuild each time to catch filter state)
+    const dataCtx=buildDataContext();
+
+    // Keep last 6 messages for conversation continuity
+    chatHistory.push({role:'user',content:q});
+    if(chatHistory.length>6)chatHistory=chatHistory.slice(-6);
+
+    const sysPrompt=`You are an expert analyst for Colorado elk hunting data from Colorado Parks & Wildlife (CPW).
+You have access to a comprehensive dataset of elk harvest statistics by Game Management Unit (GMU), covering multiple years.
+
+DATA SCHEMA:
+- h = total harvest (elk killed)
+- n = total hunters
+- p = percent success rate
+- b = bulls harvested
+- c = cows harvested
+- r = recreation days
+- Methods: All (combined), Archery, Muzzleloader, Rifle All, 1st-4th Rifle seasons
+- DAU = Data Analysis Unit (population management area, each containing multiple GMUs)
+- OTC = Over The Counter (tags available without draw)
+
+The data includes:
+1. Aggregated averages per GMU per method (all years + last 5 years)
+2. Year-by-year data per GMU for all methods combined
+3. Year-by-year data per GMU for archery, muzzleloader, and rifle
+4. Population estimates by DAU
+5. GMU-to-DAU and county mappings
+6. OTC archery and OTC 2nd/3rd rifle unit lists
+
+INSTRUCTIONS:
+- Answer questions precisely using the data provided
+- When ranking or comparing, show specific numbers
+- Format numbers with commas for readability
+- If a question is ambiguous, state your assumptions
+- Keep answers concise but thorough — use short paragraphs, not long lists
+- If the data doesn't contain what's needed, say so clearly
+- When discussing success rates, note that "p" is percentage
+- For multi-year analyses, specify which years you're averaging
+
+DATASET:
+${dataCtx}`;
+
+    const response=await fetch('/api/chat',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        system:sysPrompt,
+        messages:chatHistory
+      })
+    });
+
+    const data=await response.json();
+    typing.remove();
+
+    if(data.content&&data.content.length>0){
+      const reply=data.content.map(c=>c.text||'').join('\n');
+      appendMsg('ai',reply);
+      chatHistory.push({role:'assistant',content:reply});
+      if(chatHistory.length>6)chatHistory=chatHistory.slice(-6);
+    }else if(data.error){
+      appendMsg('system','Error: '+(data.error.message||'API request failed'));
+    }else{
+      appendMsg('system','No response received.');
+    }
+  }catch(e){
+    typing.remove();
+    appendMsg('system','Error: '+e.message);
+  }
+  chatBusy=false;
+  document.getElementById('chatSend').disabled=false;
+}
+
+function appendMsg(type,text){
+  const el=document.createElement('div');
+  el.className='chat-msg '+type;
+  if(type==='ai'){
+    el.innerHTML='<div class="msg-label">Elk Data Assistant</div>'+formatAIResponse(text);
+  }else{
+    el.textContent=text;
+  }
+  document.getElementById('chatMessages').appendChild(el);
+  el.scrollIntoView({behavior:'smooth'});
+}
+
+function formatAIResponse(text){
+  // Simple markdown-like formatting
+  return text
+    .replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\n\n/g,'</p><p style="margin-top:8px">')
+    .replace(/\n/g,'<br>')
+    .replace(/^/,'<p>').replace(/$/,'</p>');
+}
 
 init();
 </script>
