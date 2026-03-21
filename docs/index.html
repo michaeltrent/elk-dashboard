@@ -145,10 +145,70 @@
   .chat-send{width:42px;height:42px;border-radius:8px;background:var(--accent);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:opacity .2s;flex-shrink:0}
   .chat-send:disabled{opacity:.35;cursor:default}
   .chat-send svg{width:18px;height:18px;fill:var(--bg)}
+
+  /* Panel toggle (hidden on desktop) */
+  #panelToggle{display:none;position:absolute;top:12px;left:12px;z-index:1100;width:42px;height:42px;border-radius:8px;background:var(--surface);border:1px solid var(--border);cursor:pointer;align-items:center;justify-content:center;box-shadow:0 2px 12px rgba(0,0,0,.4);transition:background .2s}
+  #panelToggle:hover{background:var(--surface2)}
+  #panelToggle svg{width:20px;height:20px;fill:var(--text)}
+  #panelToggle.panel-open svg.icon-menu{display:none}
+  #panelToggle.panel-open svg.icon-close{display:block}
+  #panelToggle:not(.panel-open) svg.icon-menu{display:block}
+  #panelToggle:not(.panel-open) svg.icon-close{display:none}
+
+  /* Mobile overlay backdrop */
+  #panelBackdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999}
+
+  /* Mobile responsive */
+  @media(max-width:768px){
+    body{flex-direction:column}
+
+    #panelToggle{display:flex}
+
+    #panel{position:fixed;top:0;left:0;bottom:0;width:85vw;max-width:380px;min-width:0;transform:translateX(-100%);transition:transform .3s ease;z-index:1000;box-shadow:4px 0 24px rgba(0,0,0,.5)}
+    #panel.mobile-open{transform:translateX(0)}
+    #panelBackdrop.visible{display:block}
+
+    #map-container{width:100%;height:100vh}
+
+    .legend{bottom:16px;right:10px;padding:8px 10px;min-width:110px}
+    .legend-title{font-size:8.5px}
+    .legend-item{font-size:9.5px;gap:5px;margin-bottom:2px}
+    .legend-swatch{width:13px;height:7px}
+
+    .sma-legend{bottom:16px;left:10px;padding:8px 10px}
+
+    #chatBtn{bottom:16px;right:140px;width:40px;height:40px}
+    #chatBtn svg{width:18px;height:18px}
+
+    #chatPanel{width:100%;max-width:100%;top:0;right:0;bottom:0}
+
+    .gmu-label{font-size:8px}
+
+    .leaflet-control-zoom{top:60px!important}
+
+    select{font-size:14px;padding:10px 12px}
+    input[type="range"]::-webkit-slider-thumb{width:22px;height:22px}
+    input[type="range"]::-moz-range-thumb{width:22px;height:22px}
+    .pill-group label{padding:10px 8px;font-size:12px}
+    .preset-btn{padding:8px 12px;font-size:12px}
+  }
+
+  @media(max-width:380px){
+    #panel{width:100vw;max-width:100vw}
+    .stat-grid{grid-template-columns:1fr 1fr;gap:4px}
+    .gmu-stats{grid-template-columns:1fr 1fr 1fr;gap:3px}
+    .panel-header h1{font-size:15px}
+  }
 </style>
 </head>
 <body>
 <div id="loading"><div class="spinner"></div><div class="load-text">Loading elk data…</div></div>
+
+<button id="panelToggle" onclick="togglePanel()">
+  <svg class="icon-menu" viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+  <svg class="icon-close" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+</button>
+<div id="panelBackdrop" onclick="togglePanel()"></div>
 
 <div id="panel">
   <div class="panel-header"><h1>Colorado Elk Dashboard</h1><div class="subtitle">Harvest & Population · CPW Data</div></div>
@@ -281,6 +341,7 @@ async function init(){
     const[d,g]=await Promise.all([fetch('data/elk_dashboard.json').then(r=>r.json()),fetch('data/gmu_boundaries_slim.geojson').then(r=>r.json())]);
     DATA=d;GEOJSON=g;buildIdx();initMap();initCtrl();updateAll();
     document.getElementById('loading').classList.add('hidden');
+    setTimeout(()=>map.invalidateSize(),100);
   }catch(e){document.querySelector('.load-text').textContent='Error: '+e.message;document.querySelector('.spinner').style.display='none';console.error(e)}
 }
 
@@ -551,9 +612,22 @@ function initCtrl(){
   const os=document.getElementById('opacitySlider'),ov=document.getElementById('opacityVal');
   os.addEventListener('input',()=>{ov.textContent=os.value+'%';updateMap()});
   updateFilterUI();
+  window.addEventListener('resize',()=>{if(map)map.invalidateSize()});
 }
 
 function updateAll(){updateMap();updateSW();if(selectedGMU!=null)selectPanel(selectedGMU)}
+
+// ---- MOBILE PANEL ----
+let mobilePanel=false;
+function togglePanel(){
+  mobilePanel=!mobilePanel;
+  document.getElementById('panel').classList.toggle('mobile-open',mobilePanel);
+  document.getElementById('panelToggle').classList.toggle('panel-open',mobilePanel);
+  document.getElementById('panelBackdrop').classList.toggle('visible',mobilePanel);
+}
+function closePanelIfMobile(){
+  if(window.innerWidth<=768&&mobilePanel)togglePanel();
+}
 
 function fN(v){return v!=null?v.toLocaleString():'—'}
 function fmtM(v,m){return v==null?'—':m==='p'?v+'%':v.toLocaleString()}
