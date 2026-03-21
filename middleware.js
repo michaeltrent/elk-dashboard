@@ -1,17 +1,19 @@
-import { NextResponse } from 'next/server';
-
 export const config = {
-  matcher: ['/((?!api/auth|login.html|_next|favicon.ico).*)']
+  matcher: ['/((?!api/auth|login\\.html|_next|favicon\\.ico).*)']
 };
 
 export default function middleware(request) {
-  const token = request.cookies.get('elk-auth')?.value;
+  const cookieHeader = request.headers.get('cookie') || '';
+  const cookies = Object.fromEntries(
+    cookieHeader.split(';').map(c => c.trim().split('=')).filter(c => c.length === 2)
+  );
+  const token = cookies['elk-auth'];
   const valid = process.env.AUTH_TOKEN;
 
   if (token && token === valid) {
-    return NextResponse.next();
+    return;
   }
 
-  const loginUrl = new URL('/login.html', request.url);
-  return NextResponse.redirect(loginUrl);
+  const url = new URL('/login.html', request.url);
+  return Response.redirect(url.toString(), 302);
 }
