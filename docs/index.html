@@ -643,84 +643,56 @@ function toggleChat(){
 }
 
 function buildDataContext(){
-  // Build a compact but comprehensive summary the AI can analyze
+  // Ultra-compact format: CSV-like with pipe delimiters to minimize tokens
   const years=DATA.metadata.harvest_years||[];
   const methods=['all|all','archery|all','muzzleloader|all','rifle|all','rifle|1st','rifle|2nd','rifle|3rd','rifle|4th'];
-  const methodLabels={'all|all':'All','archery|all':'Archery','muzzleloader|all':'Muzzleloader','rifle|all':'Rifle All','rifle|1st':'1st Rifle','rifle|2nd':'2nd Rifle','rifle|3rd':'3rd Rifle','rifle|4th':'4th Rifle'};
-
-  // Aggregate per GMU per method: compute averages across all years and last 5 years
+  const ml={'all|all':'All','archery|all':'Archery','muzzleloader|all':'Muzzle','rifle|all':'RifleAll','rifle|1st':'Rifle1','rifle|2nd':'Rifle2','rifle|3rd':'Rifle3','rifle|4th':'Rifle4'};
   const gmus=[...allGMUs].sort((a,b)=>a-b);
   const maxYr=Math.max(...years),last5=years.filter(y=>y>=maxYr-4);
-  const rows=[];
 
+  // Aggregated table: GMU|Method|AvgH|AvgN|AvgP|AvgB|AvgC|AvgR|5yH|5yN|5yP|5yB|5yC|5yR
+  const lines=['GMU|Method|H_all|N_all|P_all|B_all|C_all|R_all|H_5y|N_5y|P_5y|B_5y|C_5y|R_5y'];
   for(const gmu of gmus){
     for(const mk of methods){
-      const [m,s]=mk.split('|');
-      const k=`${m}_${s}`;
+      const [m,s]=mk.split('|'),k=`${m}_${s}`;
       const recs=(hByGMU[gmu]&&hByGMU[gmu][k])||[];
       if(!recs.length)continue;
-      // All years averages
-      const n=recs.length;
-      const avg=f=>{ const vs=recs.filter(r=>r[f]!=null).map(r=>r[f]); return vs.length?Math.round(vs.reduce((a,b)=>a+b,0)/vs.length):null; };
-      // Last 5 years
+      const avg=f=>{const vs=recs.filter(r=>r[f]!=null).map(r=>r[f]);return vs.length?Math.round(vs.reduce((a,b)=>a+b,0)/vs.length):''};
       const r5=recs.filter(r=>last5.includes(r.y));
-      const avg5=f=>{ const vs=r5.filter(r=>r[f]!=null).map(r=>r[f]); return vs.length?Math.round(vs.reduce((a,b)=>a+b,0)/vs.length):null; };
-      rows.push({
-        gmu,method:methodLabels[mk],
-        yrs:recs.map(r=>r.y).join(','),
-        all_avg:{h:avg('h'),n:avg('n'),p:avg('p'),b:avg('b'),c:avg('c'),r:avg('r')},
-        last5_avg:{h:avg5('h'),n:avg5('n'),p:avg5('p'),b:avg5('b'),c:avg5('c'),r:avg5('r')}
-      });
+      const a5=f=>{const vs=r5.filter(r=>r[f]!=null).map(r=>r[f]);return vs.length?Math.round(vs.reduce((a,b)=>a+b,0)/vs.length):''};
+      lines.push(`${gmu}|${ml[mk]}|${avg('h')}|${avg('n')}|${avg('p')}|${avg('b')}|${avg('c')}|${avg('r')}|${a5('h')}|${a5('n')}|${a5('p')}|${a5('b')}|${a5('c')}|${a5('r')}`);
     }
   }
 
-  // Also include per-year raw data for targeted queries, but only "all|all" to keep it compact
-  const yearlyByGmu={};
-  for(const gmu of gmus){
-    const k='all_all';
-    const recs=(hByGMU[gmu]&&hByGMU[gmu][k])||[];
-    if(recs.length) yearlyByGmu[gmu]=recs.map(r=>({y:r.y,h:r.h,n:r.n,p:r.p,b:r.b,c:r.c,r:r.r}));
-  }
-
-  // Method-specific yearly data (more compact - only include per-year for archery, rifle)
-  const methodYearly={};
-  for(const gmu of gmus){
-    for(const mk of ['archery_all','muzzleloader_all','rifle_all']){
-      const recs=(hByGMU[gmu]&&hByGMU[gmu][mk])||[];
-      if(recs.length){
-        if(!methodYearly[mk])methodYearly[mk]={};
-        methodYearly[mk][gmu]=recs.map(r=>({y:r.y,h:r.h,n:r.n,p:r.p,b:r.b,c:r.c}));
-      }
-    }
-  }
-
-  // Population by DAU
-  const popSummary={};
-  for(const[dau,recs] of Object.entries(popByDAU)){
-    popSummary[dau]=recs.map(r=>({year:r.year,pop:r.population_estimate}));
-  }
-
-  // GMU-to-DAU mapping
-  const gmuDau={};
+  // GMU details: compact
+  const details=['GMU|DAU|County'];
   for(const f of GEOJSON.features){
-    gmuDau[f.properties.GMUID]={dau:f.properties.ELKDAU,county:f.properties.COUNTY};
+    const p=f.properties;
+    details.push(`${p.GMUID}|${p.ELKDAU||''}|${p.COUNTY||''}`);
   }
 
-  // OTC units
-  const otcArch=[...OTC_ARCHERY_GMUS].sort((a,b)=>a-b);
-  const otcRifle=[...OTC_RIFLE_GMUS].sort((a,b)=>a-b);
+  // Population: compact
+  const pop=['DAU|Year|Pop'];
+  for(const[dau,recs] of Object.entries(popByDAU)){
+    for(const r of recs) pop.push(`${dau}|${r.year}|${r.population_estimate}`);
+  }
 
-  return JSON.stringify({
-    info:'Colorado elk harvest data from CPW. Fields: h=total harvest, n=hunters, p=% success, b=bulls, c=cows, r=rec days',
-    years,
-    aggregated_by_gmu_method:rows,
-    yearly_all_methods:yearlyByGmu,
-    yearly_by_method:methodYearly,
-    population_by_dau:popSummary,
-    gmu_details:gmuDau,
-    otc_archery_units:otcArch,
-    otc_rifle_2nd3rd_units:otcRifle
-  });
+  const otcA=[...OTC_ARCHERY_GMUS].sort((a,b)=>a-b).join(',');
+  const otcR=[...OTC_RIFLE_GMUS].sort((a,b)=>a-b).join(',');
+
+  return [
+    'HARVEST AVERAGES (all-time and last 5 years):',
+    'Fields: H=harvest,N=hunters,P=%success,B=bulls,C=cows,R=rec_days',
+    'Suffix _all=all-year avg, _5y=last 5yr avg',
+    lines.join('\n'),
+    '\nGMU DETAILS:',
+    details.join('\n'),
+    '\nPOPULATION BY DAU:',
+    pop.join('\n'),
+    '\nOTC ARCHERY UNITS: '+otcA,
+    'OTC 2ND/3RD RIFLE UNITS: '+otcR,
+    '\nYEARS IN DATASET: '+years.join(',')
+  ].join('\n');
 }
 
 async function sendChat(){
@@ -751,36 +723,20 @@ async function sendChat(){
     if(chatHistory.length>6)chatHistory=chatHistory.slice(-6);
 
     const sysPrompt=`You are an expert analyst for Colorado elk hunting data from Colorado Parks & Wildlife (CPW).
-You have access to a comprehensive dataset of elk harvest statistics by Game Management Unit (GMU), covering multiple years.
+You have a pipe-delimited dataset of elk harvest statistics by Game Management Unit (GMU).
 
-DATA SCHEMA:
-- h = total harvest (elk killed)
-- n = total hunters
-- p = percent success rate
-- b = bulls harvested
-- c = cows harvested
-- r = recreation days
-- Methods: All (combined), Archery, Muzzleloader, Rifle All, 1st-4th Rifle seasons
-- DAU = Data Analysis Unit (population management area, each containing multiple GMUs)
-- OTC = Over The Counter (tags available without draw)
-
-The data includes:
-1. Aggregated averages per GMU per method (all years + last 5 years)
-2. Year-by-year data per GMU for all methods combined
-3. Year-by-year data per GMU for archery, muzzleloader, and rifle
-4. Population estimates by DAU
-5. GMU-to-DAU and county mappings
-6. OTC archery and OTC 2nd/3rd rifle unit lists
+FIELDS: H=total harvest, N=hunters, P=% success rate, B=bulls, C=cows, R=recreation days.
+Suffix _all = all-year average, _5y = last 5 year average.
+Methods: All, Archery, Muzzle(loader), RifleAll, Rifle1-4 (seasons).
+DAU = Data Analysis Unit (population management area containing multiple GMUs).
+OTC = Over The Counter tags (no draw required).
 
 INSTRUCTIONS:
-- Answer questions precisely using the data provided
-- When ranking or comparing, show specific numbers
-- Format numbers with commas for readability
-- If a question is ambiguous, state your assumptions
-- Keep answers concise but thorough — use short paragraphs, not long lists
-- If the data doesn't contain what's needed, say so clearly
-- When discussing success rates, note that "p" is percentage
-- For multi-year analyses, specify which years you're averaging
+- Answer precisely using the data. Show specific numbers with commas.
+- State assumptions if the question is ambiguous.
+- Keep answers concise — short paragraphs, not long lists unless ranking.
+- Say clearly if data doesn't contain what's needed.
+- For rankings, show top 5-10 unless asked otherwise.
 
 DATASET:
 ${dataCtx}`;
