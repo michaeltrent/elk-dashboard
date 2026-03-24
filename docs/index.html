@@ -227,7 +227,7 @@
       </select>
     </div>
     <div class="control-group"><div class="control-label">Map Metric</div>
-      <select id="metricSelect"><option value="h">Total Harvest</option><option value="n">Total Hunters</option><option value="p">% Success Rate</option><option value="b">Bulls Harvested</option><option value="c">Cows Harvested</option><option value="r">Recreation Days</option></select>
+      <select id="metricSelect"><option value="h">Total Harvest</option><option value="n">Total Hunters</option><option value="p">% Success Rate</option><option value="e">Harvest / Effort (per Rec Day)</option><option value="b">Bulls Harvested</option><option value="c">Cows Harvested</option><option value="r">Recreation Days</option></select>
     </div>
     <div class="control-group"><div class="control-label">Layer Opacity</div>
       <div class="opacity-row"><input type="range" id="opacitySlider" min="10" max="100" value="72" step="1"><span class="opacity-val" id="opacityVal">72%</span></div>
@@ -325,7 +325,7 @@ const OTC_ARCHERY_GMUS=new Set([3,6,11,13,14,15,16,17,18,21,22,25,26,27,28,30,31
 // OTC 2nd & 3rd Rifle GMUs
 const OTC_RIFLE_GMUS=new Set([3,4,5,6,11,12,13,14,15,16,17,18,21,22,23,24,25,26,27,28,30,31,32,33,34,35,36,37,38,41,42,43,44,45,47,52,53,59,60,62,63,64,65,68,70,71,72,73,74,75,77,78,80,81,82,85,86,131,133,134,140,141,142,161,171,181,211,214,231,301,361,371,411,421,431,441,444,471,511,521,581,591,681,691,711,741,751,771,851]);
 
-const FL={h:'Total Harvest',n:'Total Hunters',p:'% Success',b:'Bulls',c:'Cows',r:'Rec Days'};
+const FL={h:'Total Harvest',n:'Total Hunters',p:'% Success',e:'Harvest / Effort',b:'Bulls',c:'Cows',r:'Rec Days'};
 const SL={'all|all':'All Manners','archery|all':'Archery','muzzleloader|all':'Muzzleloader','rifle|all':'Rifle (All)','rifle|1st':'1st Rifle','rifle|2nd':'2nd Rifle','rifle|3rd':'3rd Rifle','rifle|4th':'4th Rifle'};
 const CC=['#1e2124','#2d4a2e','#3d6a3e','#4a8a42','#6aaa4a','#8abb4e','#b8cc44','#d4a054','#e87740'];
 const BM={
@@ -369,6 +369,11 @@ function isVisible(gmu){return !hiddenGMUs.has(gmu)}
 function getRec(g,y,m,s){return hIdx[`${y}_${g}_${m}_${s}`]||null}
 
 function getAvg(gmu,cy,m,s,f){
+  // Efficiency: computed as harvest / rec days
+  if(f==='e'){
+    const h=getAvg(gmu,cy,m,s,'h'),r=getAvg(gmu,cy,m,s,'r');
+    return(h!=null&&r!=null&&r>0)?Math.round(1000*h/r)/1000:null;
+  }
   const w=gW();if(w===1){const r=getRec(gmu,cy,m,s);return r?r[f]:null}
   const h=Math.floor(w/2);let sum=0,n=0;
   for(let y=cy-h;y<=cy+h;y++){const r=getRec(gmu,y,m,s);if(r&&r[f]!=null){sum+=r[f];n++}}
@@ -528,8 +533,8 @@ function colorScale(met,yr,mth,sea){
 function updateLeg(sc,met){
   document.getElementById('legTitle').textContent=FL[met];const c=document.getElementById('legItems');c.innerHTML='';
   if(!sc.br.length){c.innerHTML='<div class="legend-item" style="font-style:italic">No data for filter</div>';return}
-  c.innerHTML+=li(CC[0],'No data');const ip=met==='p';let p=0;
-  for(let i=0;i<sc.br.length;i++){const v=sc.br[i];c.innerHTML+=li(CC[i+1],ip?`${p}–${v}%`:`${fC(p)}–${fC(v)}`);p=v}
+  c.innerHTML+=li(CC[0],'No data');const ip=met==='p',ie=met==='e';let p=0;
+  for(let i=0;i<sc.br.length;i++){const v=sc.br[i];c.innerHTML+=li(CC[i+1],ip?`${p}–${v}%`:ie?`${p.toFixed(3)}–${v.toFixed(3)}`:`${fC(p)}–${fC(v)}`);p=v}
 }
 function li(c,t){return`<div class="legend-item"><div class="legend-swatch" style="background:${c}"></div><span>${t}</span></div>`}
 
@@ -543,13 +548,16 @@ function selectPanel(gmu){
   h+=`<div class="gmu-header"><h2>GMU ${gmu}</h2>${dau?`<span class="dau-badge">${dau}${hn?' · '+hn:''}</span>`:''}</div>`;
   h+=`<div class="gmu-meta">${county||''}${sqmi?' · '+sqmi+' mi²':''}</div>`;
   if(rec){
-    h+=`<div class="gmu-stats">
+    const eff=(rec.h!=null&&rec.r!=null&&rec.r>0)?(rec.h/rec.r).toFixed(3):'—';
+    h+=`<div class="gmu-stats" style="grid-template-columns:1fr 1fr 1fr 1fr">
       <div class="gmu-stat"><div class="val" style="color:var(--accent)">${fN(rec.h)}</div><div class="lbl">Harvest</div></div>
       <div class="gmu-stat"><div class="val">${fN(rec.n)}</div><div class="lbl">Hunters</div></div>
       <div class="gmu-stat"><div class="val">${rec.p!=null?rec.p+'%':'—'}</div><div class="lbl">Success</div></div>
+      <div class="gmu-stat"><div class="val" style="color:var(--red)">${eff}</div><div class="lbl">Harv/Effort</div></div>
       <div class="gmu-stat"><div class="val" style="color:var(--green)">${fN(rec.b)}</div><div class="lbl">Bulls</div></div>
       <div class="gmu-stat"><div class="val" style="color:var(--blue)">${fN(rec.c)}</div><div class="lbl">Cows</div></div>
       <div class="gmu-stat"><div class="val">${fN(rec.v)}</div><div class="lbl">Calves</div></div>
+      <div class="gmu-stat"><div class="val">${fN(rec.r)}</div><div class="lbl">Rec Days</div></div>
     </div>`;
     if(aw>1)h+=`<div class="avg-note">${aw}-year average centered on ${yr}</div>`;
   }else h+=`<div class="no-data">No data for ${sl} in ${yr}${aw>1?` (${aw}yr window)`:''}</div>`;
@@ -630,7 +638,7 @@ function closePanelIfMobile(){
 }
 
 function fN(v){return v!=null?v.toLocaleString():'—'}
-function fmtM(v,m){return v==null?'—':m==='p'?v+'%':v.toLocaleString()}
+function fmtM(v,m){return v==null?'—':m==='p'?v+'%':m==='e'?v.toFixed(3):v.toLocaleString()}
 function fC(v){if(v==null)return'—';if(v>=1e6)return(v/1e6).toFixed(1)+'M';if(v>=1e4)return Math.round(v/1e3)+'k';if(v>=1e3)return(v/1e3).toFixed(1)+'k';return v.toLocaleString()}
 
 // ---- AI CHAT ----
@@ -650,8 +658,8 @@ function buildDataContext(){
   const gmus=[...allGMUs].sort((a,b)=>a-b);
   const maxYr=Math.max(...years),last5=years.filter(y=>y>=maxYr-4);
 
-  // Aggregated table: GMU|Method|AvgH|AvgN|AvgP|AvgB|AvgC|AvgR|5yH|5yN|5yP|5yB|5yC|5yR
-  const lines=['GMU|Method|H_all|N_all|P_all|B_all|C_all|R_all|H_5y|N_5y|P_5y|B_5y|C_5y|R_5y'];
+  // Aggregated table with efficiency (E=H/R)
+  const lines=['GMU|Method|H_all|N_all|P_all|B_all|C_all|R_all|E_all|H_5y|N_5y|P_5y|B_5y|C_5y|R_5y|E_5y'];
   for(const gmu of gmus){
     for(const mk of methods){
       const [m,s]=mk.split('|'),k=`${m}_${s}`;
@@ -660,7 +668,10 @@ function buildDataContext(){
       const avg=f=>{const vs=recs.filter(r=>r[f]!=null).map(r=>r[f]);return vs.length?Math.round(vs.reduce((a,b)=>a+b,0)/vs.length):''};
       const r5=recs.filter(r=>last5.includes(r.y));
       const a5=f=>{const vs=r5.filter(r=>r[f]!=null).map(r=>r[f]);return vs.length?Math.round(vs.reduce((a,b)=>a+b,0)/vs.length):''};
-      lines.push(`${gmu}|${ml[mk]}|${avg('h')}|${avg('n')}|${avg('p')}|${avg('b')}|${avg('c')}|${avg('r')}|${a5('h')}|${a5('n')}|${a5('p')}|${a5('b')}|${a5('c')}|${a5('r')}`);
+      const ha=avg('h'),ra=avg('r'),h5=a5('h'),r5a=a5('r');
+      const ea=(ha&&ra)?(ha/ra).toFixed(3):'';
+      const e5=(h5&&r5a)?(h5/r5a).toFixed(3):'';
+      lines.push(`${gmu}|${ml[mk]}|${ha}|${avg('n')}|${avg('p')}|${avg('b')}|${avg('c')}|${ra}|${ea}|${h5}|${a5('n')}|${a5('p')}|${a5('b')}|${a5('c')}|${r5a}|${e5}`);
     }
   }
 
@@ -682,7 +693,7 @@ function buildDataContext(){
 
   return [
     'HARVEST AVERAGES (all-time and last 5 years):',
-    'Fields: H=harvest,N=hunters,P=%success,B=bulls,C=cows,R=rec_days',
+    'Fields: H=harvest,N=hunters,P=%success,B=bulls,C=cows,R=rec_days,E=harvest/effort(H/R)',
     'Suffix _all=all-year avg, _5y=last 5yr avg',
     lines.join('\n'),
     '\nGMU DETAILS:',
@@ -725,7 +736,7 @@ async function sendChat(){
     const sysPrompt=`You are an expert analyst for Colorado elk hunting data from Colorado Parks & Wildlife (CPW).
 You have a pipe-delimited dataset of elk harvest statistics by Game Management Unit (GMU).
 
-FIELDS: H=total harvest, N=hunters, P=% success rate, B=bulls, C=cows, R=recreation days.
+FIELDS: H=total harvest, N=hunters, P=% success rate, B=bulls, C=cows, R=recreation days, E=harvest efficiency (H/R, harvest per recreation day).
 Suffix _all = all-year average, _5y = last 5 year average.
 Methods: All, Archery, Muzzle(loader), RifleAll, Rifle1-4 (seasons).
 DAU = Data Analysis Unit (population management area containing multiple GMUs).
