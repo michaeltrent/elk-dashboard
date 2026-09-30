@@ -25,3 +25,8 @@ desktop.ini
 .vscode/
 *.swp
 *.swo
+
+# Habitat pipeline working data (GBs of DEM/NHD/LANDFIRE; regenerate with habitat/run_all.py)
+data/habitat/
+data/habitat_validation/
+# (the dashboard layers in docs/data/habitat_layers/ ARE committed)

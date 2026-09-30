@@ -1,0 +1,10 @@
+geopandas>=1.0
+pyogrio
+rasterio>=1.3
+requests
+numpy
+pandas
+shapely>=2.0
+scipy
+matplotlib
+scikit-learn
