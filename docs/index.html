@@ -369,10 +369,12 @@ const OTC_RIFLE_GMUS=new Set([3,4,5,6,11,12,13,14,15,16,17,18,21,22,23,24,25,26,
 const FL={h:'Total Harvest',n:'Total Hunters',p:'% Success',e:'Harvest / Effort',b:'Bulls',c:'Cows',r:'Rec Days'};
 const SL={'all|all':'All Manners','archery|all':'Archery','muzzleloader|all':'Muzzleloader','rifle|all':'Rifle (All)','rifle|1st':'1st Rifle','rifle|2nd':'2nd Rifle','rifle|3rd':'3rd Rifle','rifle|4th':'4th Rifle'};
 const CC=['#1e2124','#2d4a2e','#3d6a3e','#4a8a42','#6aaa4a','#8abb4e','#b8cc44','#d4a054','#e87740'];
+// Basemaps: Esri (no API key). CARTO started requiring a key in Aug 2026 and
+// watermarks keyless tiles with "API KEY REQUIRED".
 const BM={
-  dark:{t:'https://{s}.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}{r}.png',l:'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png',c:''},
-  light:{t:'https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',l:'https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png',c:'basemap-light'},
-  satellite:{t:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',l:'https://{s}.basemaps.cartocdn.com/dark_only_labels/{z}/{x}/{y}{r}.png',c:''}
+  dark:{t:'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',l:'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',c:''},
+  light:{t:'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',l:'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}',c:'basemap-light'},
+  satellite:{t:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',l:'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',c:''}
 };
 
 let hIdx={},hByGMU={},popByDAU={},centroids={},allGMUs=new Set();
@@ -628,7 +630,7 @@ function initMap(){
 
 function setBM(n){
   const b=BM[n];if(bmTile)map.removeLayer(bmTile);if(bmLabel)map.removeLayer(bmLabel);
-  bmTile=L.tileLayer(b.t,{attribution:'© CARTO · © OSM · © Esri',maxZoom:15}).addTo(map);
+  bmTile=L.tileLayer(b.t,{attribution:'Esri, HERE, Garmin, © OpenStreetMap contributors, and the GIS user community',maxZoom:15}).addTo(map);
   bmLabel=L.tileLayer(b.l,{maxZoom:15,pane:'overlayPane'}).addTo(map);
   document.body.className=b.c;
 }
