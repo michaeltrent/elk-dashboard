@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>try{if(localStorage.getItem('elk-theme')==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}</script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -15,6 +16,23 @@
     --text:#e8e6e3;--text-dim:#8a9199;--accent:#d4a054;--accent-dim:rgba(212,160,84,0.15);
     --green:#5ab07a;--red:#c95b5b;--blue:#5b8dc9;--purple:#9b7ec9;--panel-w:390px;
   }
+
+  /* theme-toggle */
+  :root[data-theme="light"]{
+    --bg:#eceeed;--surface:#fbfaf8;--surface2:#f2f0eb;--border:#d5d2ca;
+    --text:#1f2428;--text-dim:#5a626a;--accent:#9c6210;--accent-dim:rgba(156,98,16,.12);
+    --green:#3d8a5a;--red:#b04545;--blue:#3f6fae;--purple:#7a5fae;
+  }
+  :root[data-theme="light"] .leaflet-control-attribution{background:rgba(251,250,248,.88)!important}
+  :root[data-theme="light"] #panelBackdrop{background:rgba(0,0,0,.25)}
+  .panel-header{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  .theme-toggle{flex-shrink:0;width:32px;height:32px;border-radius:7px;border:1px solid var(--border);background:var(--bg);
+    color:var(--text-dim);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:color .2s,border-color .2s}
+  .theme-toggle:hover{color:var(--accent);border-color:var(--accent)}
+  .theme-toggle svg{width:16px;height:16px}
+  .theme-toggle .ico-sun{display:none}
+  :root[data-theme="light"] .theme-toggle .ico-sun{display:block}
+  :root[data-theme="light"] .theme-toggle .ico-moon{display:none}
   *{margin:0;padding:0;box-sizing:border-box}
   body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex}
 
@@ -225,7 +243,10 @@
 <div id="panelBackdrop" onclick="togglePanel()"></div>
 
 <div id="panel">
-  <div class="panel-header"><h1>Colorado Elk Dashboard</h1><div class="subtitle">Harvest & Population · CPW Data</div></div>
+  <div class="panel-header"><div><h1>Colorado Elk Dashboard</h1><div class="subtitle">Harvest & Population · CPW Data</div></div><button class="theme-toggle" id="themeToggle" type="button" title="Switch light / dark" aria-label="Switch light / dark theme">
+    <svg class="ico-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+    <svg class="ico-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+  </button></div>
   <div class="controls">
     <div class="control-group"><div class="control-label">Year</div>
       <div class="year-slider-wrap"><input type="range" id="yearSlider" min="2006" max="2024" value="2024" step="1"><div class="year-display" id="yearDisplay">2024</div></div>
@@ -382,7 +403,7 @@ let hIdx={},hByGMU={},popByDAU={},centroids={},allGMUs=new Set();
 async function init(){
   try{
     const[d,g]=await Promise.all([fetch('data/elk_dashboard.json').then(r=>r.json()),fetch('data/gmu_boundaries_slim.geojson').then(r=>r.json())]);
-    DATA=d;GEOJSON=g;buildIdx();initMap();initCtrl();updateAll();
+    DATA=d;GEOJSON=g;buildIdx();initMap();if(currentTheme()==='light')setTheme('light',false);initCtrl();updateAll();
     document.getElementById('loading').classList.add('hidden');
     setTimeout(()=>map.invalidateSize(),100);
   }catch(e){document.querySelector('.load-text').textContent='Error: '+e.message;document.querySelector('.spinner').style.display='none';console.error(e)}
@@ -718,8 +739,41 @@ function selectPanel(gmu){
   requestAnimationFrame(()=>{renderPop(dau,yr);renderHarv(gmu,yr,mth,sea)});
 }
 
+
+// ---- THEME (dark / light) ----
+function currentTheme(){return document.documentElement.getAttribute('data-theme')==='light'?'light':'dark'}
+function setTheme(t,fromUser){
+  if(t==='light')document.documentElement.setAttribute('data-theme','light');
+  else document.documentElement.removeAttribute('data-theme');
+  try{localStorage.setItem('elk-theme',t)}catch(e){}
+  CB=mkCB();
+  CC[0]=t==='light'?'#cfccc4':'#1e2124';   // "No data" units: soft gray on light, near-black on dark
+  // Match the basemap to the theme unless the user is on satellite.
+  const sat=document.getElementById('bmSat');
+  if(map&&!(sat&&sat.checked)){
+    const id=t==='light'?'bmLight':'bmDark',r=document.getElementById(id);
+    if(r&&!r.checked){r.checked=true;setBM(t)}
+  }
+  if(fromUser&&map)updateMap();
+  [popChart,harvestChart].forEach(ch=>{if(ch)recolorChart(ch)});   // recolor open charts
+}
+function recolorChart(ch){
+  const T=themeColors(),o=ch.options,tt=o.plugins&&o.plugins.tooltip;
+  if(tt){tt.backgroundColor=T.surface;tt.borderColor=T.border;tt.titleColor=T.text;tt.bodyColor=T.text}
+  if(o.plugins&&o.plugins.legend&&o.plugins.legend.labels)o.plugins.legend.labels.color=T.dim;
+  ['x','y'].forEach(k=>{const a=o.scales&&o.scales[k];if(!a)return;
+    if(a.ticks)a.ticks.color=T.dim;if(a.grid)a.grid.color=T.grid;if(a.border)a.border.color=T.border});
+  ch.update('none');
+}
+
 // ---- CHARTS ----
-const CB={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#181c20',borderColor:'#2a2f35',borderWidth:1,titleColor:'#e8e6e3',bodyColor:'#e8e6e3',titleFont:{family:'DM Sans',size:11,weight:600},bodyFont:{family:'JetBrains Mono',size:11},padding:8,cornerRadius:5,displayColors:false}},scales:{x:{ticks:{color:'#8a9199',font:{family:'JetBrains Mono',size:9}},grid:{color:'rgba(42,47,53,.4)',drawTicks:false},border:{color:'#2a2f35'}},y:{ticks:{color:'#8a9199',font:{family:'JetBrains Mono',size:9},callback:v=>v>=1000?(v/1000)+'k':v},grid:{color:'rgba(42,47,53,.4)',drawTicks:false},border:{color:'#2a2f35'},beginAtZero:false}},layout:{padding:{top:2,right:2}}};
+// Chart colors follow the theme (see setTheme)
+function themeColors(){const s=getComputedStyle(document.documentElement),v=n=>s.getPropertyValue(n).trim();
+  const light=document.documentElement.getAttribute('data-theme')==='light';
+  return{surface:v('--surface'),border:v('--border'),text:v('--text'),dim:v('--text-dim'),
+    grid:light?'rgba(120,115,105,.18)':'rgba(42,47,53,.4)'}}
+function mkCB(){const T=themeColors();return {responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:T.surface,borderColor:T.border,borderWidth:1,titleColor:T.text,bodyColor:T.text,titleFont:{family:'DM Sans',size:11,weight:600},bodyFont:{family:'JetBrains Mono',size:11},padding:8,cornerRadius:5,displayColors:false}},scales:{x:{ticks:{color:T.dim,font:{family:'JetBrains Mono',size:9}},grid:{color:T.grid,drawTicks:false},border:{color:T.border}},y:{ticks:{color:T.dim,font:{family:'JetBrains Mono',size:9},callback:v=>v>=1000?(v/1000)+'k':v},grid:{color:T.grid,drawTicks:false},border:{color:T.border},beginAtZero:false}},layout:{padding:{top:2,right:2}}}}
+let CB=mkCB();
 
 function renderPop(dau,cy){
   const cv=document.getElementById('popC');if(!cv)return;if(popChart){popChart.destroy();popChart=null}
@@ -737,7 +791,7 @@ function renderHarv(gmu,cy,mth,sea){
     {label:'Bulls',data:recs.map(r=>r.b),backgroundColor:lb.map(y=>mc('#5ab07a',y)),borderRadius:2,barPercentage:.75},
     {label:'Cows',data:recs.map(r=>r.c),backgroundColor:lb.map(y=>mc('#5b8dc9',y)),borderRadius:2,barPercentage:.75},
     {label:'Calves',data:recs.map(r=>r.v),backgroundColor:lb.map(y=>mc('#9b7ec9',y)),borderRadius:2,barPercentage:.75}
-  ]},options:{...CB,plugins:{...CB.plugins,legend:{display:true,position:'top',align:'end',labels:{color:'#8a9199',font:{family:'DM Sans',size:9.5},boxWidth:9,boxHeight:9,borderRadius:2,padding:6}},tooltip:{...CB.plugins.tooltip,mode:'index',callbacks:{title:c=>'Year: '+c[0].label,label:c=>c.dataset.label+': '+c.parsed.y.toLocaleString()}}},scales:{...CB.scales,x:{...CB.scales.x,stacked:true},y:{...CB.scales.y,stacked:true,beginAtZero:true}}}});
+  ]},options:{...CB,plugins:{...CB.plugins,legend:{display:true,position:'top',align:'end',labels:{color:themeColors().dim,font:{family:'DM Sans',size:9.5},boxWidth:9,boxHeight:9,borderRadius:2,padding:6}},tooltip:{...CB.plugins.tooltip,mode:'index',callbacks:{title:c=>'Year: '+c[0].label,label:c=>c.dataset.label+': '+c.parsed.y.toLocaleString()}}},scales:{...CB.scales,x:{...CB.scales.x,stacked:true},y:{...CB.scales.y,stacked:true,beginAtZero:true}}}});
 }
 
 // ---- STATEWIDE ----
@@ -760,6 +814,7 @@ function updateSW(){
 
 // ---- CONTROLS ----
 function initCtrl(){
+  document.getElementById('themeToggle').addEventListener('click',()=>setTheme(currentTheme()==='light'?'dark':'light',true));
   const sl=document.getElementById('yearSlider'),dp=document.getElementById('yearDisplay');
   sl.addEventListener('input',()=>{dp.textContent=sl.value;updateAll()});
   document.getElementById('metricSelect').addEventListener('change',updateMap);
