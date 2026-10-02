@@ -272,6 +272,8 @@
         <input type="radio" name="basemap" id="bmDark" value="dark" checked><label for="bmDark">Dark</label>
         <input type="radio" name="basemap" id="bmLight" value="light"><label for="bmLight">Light</label>
         <input type="radio" name="basemap" id="bmSat" value="satellite"><label for="bmSat">Satellite</label>
+        <input type="radio" name="basemap" id="bmStreets" value="streets"><label for="bmStreets">Streets</label>
+        <input type="radio" name="basemap" id="bmTopo" value="topo"><label for="bmTopo">Topo</label>
       </div>
     </div>
     <div class="control-group"><div class="control-label">Public Lands (BLM SMA)</div>
@@ -395,7 +397,9 @@ const CC=['#1e2124','#2d4a2e','#3d6a3e','#4a8a42','#6aaa4a','#8abb4e','#b8cc44',
 const BM={
   dark:{t:'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',l:'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',c:''},
   light:{t:'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',l:'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}',c:'basemap-light'},
-  satellite:{t:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',l:'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',c:''}
+  satellite:{t:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',l:'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',c:''},
+  streets:{t:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',l:null,c:'basemap-light'},
+  topo:{t:'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',l:null,c:'basemap-light'}
 };
 
 let hIdx={},hByGMU={},popByDAU={},centroids={},allGMUs=new Set();
@@ -652,7 +656,7 @@ function initMap(){
 function setBM(n){
   const b=BM[n];if(bmTile)map.removeLayer(bmTile);if(bmLabel)map.removeLayer(bmLabel);
   bmTile=L.tileLayer(b.t,{attribution:'Esri, HERE, Garmin, © OpenStreetMap contributors, and the GIS user community',maxZoom:15}).addTo(map);
-  bmLabel=L.tileLayer(b.l,{maxZoom:15,pane:'overlayPane'}).addTo(map);
+  bmLabel=b.l?L.tileLayer(b.l,{maxZoom:15,pane:'overlayPane'}).addTo(map):null;
   document.body.className=b.c;
 }
 
@@ -748,9 +752,10 @@ function setTheme(t,fromUser){
   try{localStorage.setItem('elk-theme',t)}catch(e){}
   CB=mkCB();
   CC[0]=t==='light'?'#cfccc4':'#1e2124';   // "No data" units: soft gray on light, near-black on dark
-  // Match the basemap to the theme unless the user is on satellite.
-  const sat=document.getElementById('bmSat');
-  if(map&&!(sat&&sat.checked)){
+  // Match the basemap to the theme only when it's on Dark or Light
+  // (leave Satellite, Streets and Topo alone).
+  const cur=document.querySelector('input[name="basemap"]:checked');
+  if(map&&cur&&(cur.value==='dark'||cur.value==='light')){
     const id=t==='light'?'bmLight':'bmDark',r=document.getElementById(id);
     if(r&&!r.checked){r.checked=true;setBM(t)}
   }
